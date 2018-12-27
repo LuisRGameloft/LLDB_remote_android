@@ -4,7 +4,7 @@ android {
     compileSdkVersion 28
 
     defaultConfig {
-        applicationId = 'com.example.native_activity'
+        applicationId = 'com.remotelldb.whiso.demodebuglldb'
         minSdkVersion 14
         targetSdkVersion 28
         externalNativeBuild {
