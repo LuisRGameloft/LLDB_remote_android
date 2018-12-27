@@ -1,3 +1,11 @@
-rem Setup all tools
+REM Setup all tools
 @echo off
+
+REM Set name of Android Package. Eg. com.xx.xx
+set ANDROID_PACKAGE=
+
+REM Set name of Main Activity 
+set MAIN_ACTIVITY=
+
+REM Set Path of ADB tool 
 set ADB_PATH=
