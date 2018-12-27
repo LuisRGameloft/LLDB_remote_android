@@ -1,0 +1,3 @@
+rem Setup all tools
+@echo off
+set ADB_PATH=
