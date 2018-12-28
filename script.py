@@ -58,6 +58,10 @@ def main():
     command = g_adb_tool + ' shell am start -n "' + g_android_package + '/' + g_android_main_activity + '" -a android.intent.action.MAIN -c android.intent.category.LAUNCHER -D'
     subprocess.Popen(command, stdout=subprocess.PIPE).wait()
 
+    #Create LLDB folders into device /data/data/<package-id>/lldb and ~/lldb/bin
+    command = g_adb_tool + " shell run-as " + g_android_package + " sh -c 'mkdir /data/data/" + g_android_package + "/lldb; mkdir /data/data/" + g_android_package + "/lldb/bin'"
+    subprocess.Popen(command, stdout=subprocess.PIPE).wait()
+
     #Install lldbserver into package folder /data/data/<package-id>/lldb/bin
     command = g_adb_tool + " shell \"cat /data/local/tmp/lldb-server | run-as " + g_android_package + " sh -c 'cat > /data/data/" + g_android_package + "/lldb/bin/lldb-server && chmod 700 /data/data/" + g_android_package + "/lldb/bin/lldb-server'\""
     subprocess.Popen(command, stdout=subprocess.PIPE).wait()
@@ -66,6 +70,10 @@ def main():
     command = g_adb_tool + " shell \"cat /data/local/tmp/start_lldb_server.sh | run-as " + g_android_package + " sh -c 'cat > /data/data/" + g_android_package + "/lldb/bin/start_lldb_server.sh && chmod 700 /data/data/" + g_android_package + "/lldb/bin/start_lldb_server.sh'\""
     subprocess.Popen(command, stdout=subprocess.PIPE).wait()
     
-    
+    #Install start_lldb_server.sh script into package folder /data/data/<package-id>/lldb/bin
+    #command = g_adb_tool + " shell run-as " + g_android_package + " sh -c '/data/data/" + g_android_package + "/lldb/bin/start_lldb_server.sh /data/data/" + g_android_package + " unix-abstract /" + g_android_package + "-0 platform-1545976949340.sock \"lldb process:gdb-remote packets\"'"
+    #print command
+    #os.system(command)
+
 if __name__ == "__main__":
     main()
