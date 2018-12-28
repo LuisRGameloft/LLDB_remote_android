@@ -58,11 +58,11 @@ def main():
     command = g_adb_tool + ' shell am start -n "' + g_android_package + '/' + g_android_main_activity + '" -a android.intent.action.MAIN -c android.intent.category.LAUNCHER -D'
     subprocess.Popen(command, stdout=subprocess.PIPE).wait()
 
-    #Install lldbserver into package folder
+    #Install lldbserver into package folder /data/data/<package-id>/lldb/bin
     command = g_adb_tool + " shell \"cat /data/local/tmp/lldb-server | run-as " + g_android_package + " sh -c 'cat > /data/data/" + g_android_package + "/lldb/bin/lldb-server && chmod 700 /data/data/" + g_android_package + "/lldb/bin/lldb-server'\""
     subprocess.Popen(command, stdout=subprocess.PIPE).wait()
     
-    #Install start_lldb_server.sh script into package folder
+    #Install start_lldb_server.sh script into package folder /data/data/<package-id>/lldb/bin
     command = g_adb_tool + " shell \"cat /data/local/tmp/start_lldb_server.sh | run-as " + g_android_package + " sh -c 'cat > /data/data/" + g_android_package + "/lldb/bin/start_lldb_server.sh && chmod 700 /data/data/" + g_android_package + "/lldb/bin/start_lldb_server.sh'\""
     subprocess.Popen(command, stdout=subprocess.PIPE).wait()
     
