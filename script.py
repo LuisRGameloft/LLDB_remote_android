@@ -50,15 +50,11 @@ def main():
     command = g_adb_tool + ' push ' + lldb_server_script_path + ' /data/local/tmp/' + lldb_server_script
     subprocess.Popen(command, stdout=subprocess.PIPE).wait()
 
+    ommand = g_adb_tool + ' shell am force-stop ' + g_android_package
+    subprocess.Popen(command, stdout=subprocess.PIPE).wait()
 
-
-
-    #command = g_adb_tool + ' shell am force-stop ' + g_android_package
-    #print command
-    #subprocess.Popen(command, stdout=subprocess.PIPE).wait()
-
-    #command = g_adb_tool + ' shell am start -n "' + g_android_package + '/' + g_android_main_activity + '" -a android.intent.action.MAIN -c android.intent.category.LAUNCHER -D'
-    #subprocess.Popen(command, stdout=subprocess.PIPE).wait()
+    command = g_adb_tool + ' shell am start -n "' + g_android_package + '/' + g_android_main_activity + '" -a android.intent.action.MAIN -c android.intent.category.LAUNCHER -D'
+    subprocess.Popen(command, stdout=subprocess.PIPE).wait()
 
     # my code here
 
