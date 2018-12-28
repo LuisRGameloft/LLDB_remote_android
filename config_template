@@ -9,3 +9,6 @@ set MAIN_ACTIVITY=
 
 REM Set Path of ADB tool 
 set ADB_PATH=
+
+REM Set Path of Python Framework 
+set PYTHON_PATH=
