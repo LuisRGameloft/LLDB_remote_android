@@ -71,9 +71,10 @@ def main():
     subprocess.Popen(command, stdout=subprocess.PIPE).wait()
     
     #Install start_lldb_server.sh script into package folder /data/data/<package-id>/lldb/bin
+    print "Debugger is running ..."
     command = g_adb_tool + " shell run-as " + g_android_package + " sh -c '/data/data/" + g_android_package + "/lldb/bin/start_lldb_server.sh /data/data/" + g_android_package + "/lldb unix-abstract /" + g_android_package + "-0 platform-1545976949340.sock \"lldb process:gdb-remote packets\"'"
-    print command
-    os.system(command)
+    subprocess.call(command)
+    
 
 if __name__ == "__main__":
     main()
