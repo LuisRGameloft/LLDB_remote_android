@@ -14,6 +14,7 @@ g_current_working_path      = os.getcwd()
 g_LLDB_working_path         = os.path.join(g_current_working_path, 'LLDB', 'Windows')
 g_android_repository_url    = 'https://dl.google.com/android/repository/'
 g_lldb_tool                 = 'lldb-3.1.4508709-windows.zip'
+g_current_miliseconds       = = int(round(time.time() * 1000))
 
 def main():
 
@@ -74,7 +75,7 @@ def main():
     
     #Install start_lldb_server.sh script into package folder /data/data/<package-id>/lldb/bin
     print "Debugger is running ..."
-    command = g_adb_tool + " shell run-as " + g_android_package + " sh -c '/data/data/" + g_android_package + "/lldb/bin/start_lldb_server.sh /data/data/" + g_android_package + "/lldb unix-abstract /" + g_android_package + "-0 platform-1545976949340.sock \"lldb process:gdb-remote packets\"'"
+    command = g_adb_tool + " shell run-as " + g_android_package + " sh -c '/data/data/" + g_android_package + "/lldb/bin/start_lldb_server.sh /data/data/" + g_android_package + "/lldb unix-abstract /" + g_android_package + "-0 platform-" + g_current_miliseconds + ".sock \"lldb process:gdb-remote packets\"'"
     debugger_process = subprocess.Popen(command, stdout=subprocess.PIPE)
     
     # Get Current PID for current debugger session
@@ -92,7 +93,7 @@ def main():
     device_name = process_device_name.stdout.readline().split()[0]
 
     
-    os.kill(debugger_process.pid, signal.SIGTERM)
+    #os.kill(debugger_process.pid, signal.SIGTERM)
 
     print current_pid
     print "[" + device_name + "]"
