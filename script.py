@@ -10,11 +10,12 @@ g_adb_tool                  = os.environ['ADB_PATH'] + '/adb.exe'
 g_android_package           = os.environ['ANDROID_PACKAGE']
 g_android_main_activity     = os.environ['MAIN_ACTIVITY']
 g_arch_device               = os.environ['ARCH_DEVICE']
+g_java_sdk_path             = os.environ['JAVA_SDK_PATH']
 g_current_working_path      = os.getcwd()
 g_LLDB_working_path         = os.path.join(g_current_working_path, 'LLDB', 'Windows')
 g_android_repository_url    = 'https://dl.google.com/android/repository/'
 g_lldb_tool                 = 'lldb-3.1.4508709-windows.zip'
-g_current_miliseconds       = = int(round(time.time() * 1000))
+g_current_miliseconds       = str(int(round(time.time() * 1000)))
 
 def main():
 
@@ -92,7 +93,16 @@ def main():
     process_device_name.stdout.readline()
     device_name = process_device_name.stdout.readline().split()[0]
 
-    
+    subprocess.Popen("start dir", shell=True)
+
+    #Set TCP Forward ports
+    command = g_adb_tool + " -d forward tcp:29882 jdwp:" + current_pid
+    subprocess.Popen(command, stdout=subprocess.PIPE)
+
+    #run APP
+    command = g_java_sdk_path + "\\bin\\jdb.exe " + "-J-Duser.home=. -connect com.sun.jdi.SocketAttach:hostname=localhost,port=29882"
+    subprocess.Popen(command, stdout=subprocess.PIPE)
+
     #os.kill(debugger_process.pid, signal.SIGTERM)
 
     print current_pid
