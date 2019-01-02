@@ -89,13 +89,13 @@ def main():
     process_device_name = subprocess.Popen(command, stdout=subprocess.PIPE)
     #read dummy first line this is "List of devices attached"
     process_device_name.stdout.readline()
-    device_name = process_device_name.stdout.readline().split()
+    device_name = process_device_name.stdout.readline().split()[0]
 
     
     os.kill(debugger_process.pid, signal.SIGTERM)
 
     print current_pid
-    print "[" + device_name[0] + "]"
+    print "[" + device_name + "]"
 
 
 
