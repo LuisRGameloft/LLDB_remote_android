@@ -89,7 +89,7 @@ def main():
     # Get Current Device's name connected
     command = g_adb_tool + " devices"
     process_device_name = subprocess.Popen(command, stdout=subprocess.PIPE)
-    #read dummy first line this is "List of devices attached"
+    #read dummy first line this is "List of devices attached" string
     process_device_name.stdout.readline()
     device_name = process_device_name.stdout.readline().split()[0]
 
