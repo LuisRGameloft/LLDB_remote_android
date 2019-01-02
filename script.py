@@ -6,39 +6,39 @@ import zipfile
 import time
 import signal
 
-g_adb_tool                  = os.environ['ADB_PATH'] + '/adb.exe'
-g_android_package           = os.environ['ANDROID_PACKAGE']
+g_adb_tool                  = os.path.join(os.environ['ADB_PATH'], 'adb.exe')
+g_android_package           = os.environ['ANDROID_PACKAGE_ID']
 g_android_main_activity     = os.environ['MAIN_ACTIVITY']
 g_arch_device               = os.environ['ARCH_DEVICE']
 g_java_sdk_path             = os.environ['JAVA_SDK_PATH']
 g_current_working_path      = os.getcwd()
 g_LLDB_working_path         = os.path.join(g_current_working_path, 'LLDB', 'Windows')
-g_android_repository_url    = 'https://dl.google.com/android/repository/'
-g_lldb_tool                 = 'lldb-3.1.4508709-windows.zip'
+#g_android_repository_url    = 'https://dl.google.com/android/repository/'
+#g_lldb_tool                 = 'lldb-3.1.4508709-windows.zip'
 g_current_miliseconds       = str(int(round(time.time() * 1000)))
 
 def main():
 
     #Check for LLDB tool
-    if not os.path.exists(os.path.join(g_LLDB_working_path, 'bin', 'LLDBFrontend.exe')):
-        print "LLDB doesn't exists, Downloading Android LLDB tool ... "
-        LLDB_zip_file = os.path.join(g_current_working_path, g_lldb_tool)
-        urllib.urlretrieve (g_android_repository_url + g_lldb_tool, LLDB_zip_file)
-        print "Downloaded!!! , Uncompressing ... "
+    #if not os.path.exists(os.path.join(g_LLDB_working_path, 'bin', 'LLDBFrontend.exe')):
+    #    print "LLDB doesn't exists, Downloading Android LLDB tool ... "
+    #    LLDB_zip_file = os.path.join(g_current_working_path, g_lldb_tool)
+    #    urllib.urlretrieve (g_android_repository_url + g_lldb_tool, LLDB_zip_file)
+    #    print "Downloaded!!! , Uncompressing ... "
         
         #Check for LLDB paths
-        LLDB_path = os.path.join(g_current_working_path, 'LLDB')
-        if not os.path.exists(LLDB_path):
-            os.mkdir(LLDB_path)
+    #    LLDB_path = os.path.join(g_current_working_path, 'LLDB')
+    #    if not os.path.exists(LLDB_path):
+    #        os.mkdir(LLDB_path)
 
-        LLDB_path = os.path.join(LLDB_path, 'Windows')
-        if not os.path.exists(LLDB_path):
-            os.mkdir(LLDB_path)
+    #    LLDB_path = os.path.join(LLDB_path, 'Windows')
+    #    if not os.path.exists(LLDB_path):
+    #        os.mkdir(LLDB_path)
 
-        LLDB_zip = zipfile.ZipFile(LLDB_zip_file)
-        LLDB_zip.extractall(g_LLDB_working_path)
-        LLDB_zip.close()
-        print "Downloaded!!! , Uncompressing ... Done"
+    #    LLDB_zip = zipfile.ZipFile(LLDB_zip_file)
+    #    LLDB_zip.extractall(g_LLDB_working_path)
+    #    LLDB_zip.close()
+    #    print "Downloaded!!! , Uncompressing ... Done"
 
     print "Install LLDB files into device"
     
@@ -82,8 +82,10 @@ def main():
     # Get Current PID for current debugger session
     command = g_adb_tool + " jdwp"
     process_jdwp = subprocess.Popen(command, stdout=subprocess.PIPE)
+    #Wait for 1/2 second
     time.sleep(0.5)
     current_pid = process_jdwp.stdout.readline()
+    #Kill the current jdwp command
     os.kill(process_jdwp.pid, signal.SIGTERM)
 
     # Get Current Device's name connected
@@ -93,21 +95,28 @@ def main():
     process_device_name.stdout.readline()
     device_name = process_device_name.stdout.readline().split()[0]
 
-    subprocess.Popen("start dir", shell=True)
+    #Create script_commands for LLDB
+    command_working_filename = os.path.join(g_current_working_path, 'lldb_cmds.txt')
+    command_working_file = open(command_working_filename, "w")
+    command_working_file.write("platform select remote-android\n")
+    command_working_file.write("platform connect unix-abstract-connect://" + device_name + "/" + g_android_package + "-0/platform-" + g_current_miliseconds + ".sock\n")
+    command_working_file.write("process attach -p " + current_pid + "\n")
+    command_working_file.close()
+
+    lldb_tool_path = os.path.join(g_LLDB_working_path, 'bin', 'lldb.exe')
+    #Attach to LLDB
+    subprocess.Popen("start " + lldb_tool_path + " -s " + command_working_filename, shell=True)
+
+    #Wait for 5 seconds to sync with LLDB tool
+    time.sleep(5)
 
     #Set TCP Forward ports
     command = g_adb_tool + " -d forward tcp:29882 jdwp:" + current_pid
     subprocess.Popen(command, stdout=subprocess.PIPE)
 
     #run APP
-    command = g_java_sdk_path + "\\bin\\jdb.exe " + "-J-Duser.home=. -connect com.sun.jdi.SocketAttach:hostname=localhost,port=29882"
+    command = os.path.join(g_java_sdk_path, 'bin', 'jdb.exe') + " -J-Duser.home=. -connect com.sun.jdi.SocketAttach:hostname=localhost,port=29882"
     subprocess.Popen(command, stdout=subprocess.PIPE)
-
-    #os.kill(debugger_process.pid, signal.SIGTERM)
-
-    print current_pid
-    print "[" + device_name + "]"
-
 
 
 if __name__ == "__main__":
