@@ -16,7 +16,7 @@ g_android_main_activity     = os.environ['MAIN_ACTIVITY']
 g_arch_device               = os.environ['ARCH_DEVICE']
 g_java_sdk_path             = os.environ['JAVA_SDK_PATH']
 g_current_working_path      = os.getcwd()
-g_LLDB_working_path         = os.path.join(g_current_working_path, 'LLDB', 'Windows')
+g_LLDB_working_path         = os.path.join(g_current_working_path, 'LLDB')
 #g_android_repository_url    = 'https://dl.google.com/android/repository/'
 #g_lldb_tool                 = 'lldb-3.1.4508709-windows.zip'
 g_current_miliseconds       = str(int(round(time.time() * 1000)))
@@ -45,9 +45,9 @@ def destroy_previous_session_debugger(task):
 
     PIDS = processes.get(task, [])
     if PIDS:
-        print "Destroying previous LLDB server sessions"
+        print ("Destroying previous LLDB server sessions")
         for pid in PIDS:
-            print "Killing processes: " + pid
+            print ("Killing processes: " + pid)
             command = g_adb_tool + " shell run-as " + g_android_package + " kill -9 " + pid 
             subprocess.Popen(command).wait()
     
@@ -55,8 +55,6 @@ def destroy_previous_session_debugger(task):
 
 
 def start_jdb(adb_tool, sdk_path, pid):
-    print "Starting jdb to unblock application."
-
     # Do setup stuff to keep ^C in the parent from killing us.
     signal.signal(signal.SIGINT, signal.SIG_IGN)
     
@@ -79,23 +77,19 @@ def start_jdb(adb_tool, sdk_path, pid):
     # start polling for a Java debugger (e.g. every 200ms). We need to wait
     # a while longer then so that the app notices jdb.
     jdb_magic = "__verify_jdb_has_started__"
-    jdb.stdin.write('print "{}"\n'.format(jdb_magic))
+    jdb.stdin.write(bytes("print \"{}\"\n".format(jdb_magic), 'utf-8'))
     saw_magic_str = False
     while True:
         line = jdb.stdout.readline()
         if line == "":
             break
-        print "jdb output: " + line.rstrip()
-        if jdb_magic in line and not saw_magic_str:
+        #if jdb_magic in line and not saw_magic_str:
+        if bytes(jdb_magic, 'utf-8') in line and not saw_magic_str:
             saw_magic_str = True
             time.sleep(0.3)
             jdb.stdin.write("exit\n")
     jdb.wait()
-    if saw_magic_str:
-        print "JDB finished unblocking application."
-    else:
-        print "error: did not find magic string in JDB output."
-
+    
 def main():
     if sys.argv[1:2] == ["--wakeup"]:
         return start_jdb(*sys.argv[2:])
@@ -106,11 +100,11 @@ def main():
     output, _ = process.communicate()
     lines = re.split(r'[\r\n]+', output.replace("\r", "").rstrip())
     if len(lines) < 2:
-        print "Error: device disconnected!"
+        print ("Error: device disconnected!")
         return -1
     
     if not "device" in lines[1]:
-        print "Error: device disconnected!"
+        print ("Error: device disconnected!")
         return -1
 
     #Check for LLDB tool
@@ -136,7 +130,7 @@ def main():
 
     destroy_previous_session_debugger("/data/data/" + g_android_package + "/lldb/bin/lldb-server")
 
-    print "Install LLDB files into device"
+    print ("Install LLDB files into device")
     
     #Install LLDB Server
     lldb_server_name    = 'lldb-server' 
@@ -171,7 +165,7 @@ def main():
     subprocess.Popen(command, stdout=subprocess.PIPE).wait()
     
     #start start_lldb_server.sh script into package folder /data/data/<package-id>/lldb/bin
-    print "Debugger is running ..."
+    print ("Debugger is running ...")
     command = g_adb_tool + " shell run-as " + g_android_package + " sh -c '/data/data/" + g_android_package + "/lldb/bin/start_lldb_server.sh /data/data/" + g_android_package + "/lldb unix-abstract /" + g_android_package + "-0 platform-" + g_current_miliseconds + ".sock \"lldb process:gdb-remote packets\"'"
     debugger_process = subprocess.Popen(command, stdout=subprocess.PIPE)
     
@@ -195,15 +189,10 @@ def main():
     command_working_lldb = "platform select remote-android\n"
     command_working_lldb += "platform connect unix-abstract-connect://" + device_name + "/" + g_android_package + "-0/platform-" + g_current_miliseconds + ".sock\n"
     command_working_lldb += "process attach -p " + current_pid + "\n"
-    command_working_lldb += """
-script
-def start_jdb_to_unblock_app():
-  import subprocess
-  subprocess.Popen({})
-start_jdb_to_unblock_app()
-    """.format(repr(
+    command_working_lldb += "script import subprocess\n"
+    command_working_lldb += "script subprocess.Popen({})\n".format(repr(
             [
-                sys.executable,
+                "python",
                 os.path.realpath(__file__),
                 "--wakeup",
                 g_adb_tool,
