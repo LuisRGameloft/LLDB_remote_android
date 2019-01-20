@@ -183,46 +183,6 @@ def main():
 
     destroy_previous_session_debugger("lldb-server")
     
-    print ("Getting main libraries to load to debugger ...")
-    root_working = os.path.join(g_current_working_path , g_arch_device)
-    is_64 = "64" in g_detected_abi
-
-    required_files = []
-    libraries = ["libc.so", "libm.so", "libdl.so"]
-
-    if is_64:
-        required_files = ["/system/bin/app_process64", "/system/bin/linker64"]
-        library_path = "/system/lib64"
-    else:
-        required_files = ["/system/bin/linker"]
-        library_path = "/system/lib"
-
-    for library in libraries:
-        required_files.append(posixpath.join(library_path, library))
-
-    for required_file in required_files:
-        # os.path.join not used because joining absolute paths will pick the last one
-        local_path = os.path.realpath(root_working + required_file)
-        local_dirname = os.path.dirname(local_path)
-        if not os.path.isdir(local_dirname):
-            os.makedirs(local_dirname)
-        
-        command = g_adb_tool + ' pull ' + required_file + ' ' + local_path
-        stdout, stderr = run_command(command)
-
-    if not is_64:
-        destination = os.path.realpath(root_working + "/system/bin/app_process")
-        try:
-            command = g_adb_tool + ' pull /system/bin/app_process32 ' + destination
-            stdout, stderr = run_command(command)
-        except:
-            command = g_adb_tool + ' pull /system/bin/app_process ' + destination
-            stdout, stderr = run_command(command)
-
-    binary_path = os.path.join(root_working, "system", "bin", "app_process")
-    if is_64:
-        binary_path = os.path.join(root_working, "system", "bin", "app_process64")
-    
     print ("Install LLDB files into device")
     
     #Install LLDB Server
