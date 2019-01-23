@@ -244,7 +244,7 @@ def main():
 
     #start gbserver into package folder /data/data/<package-id>/gdb/bin
     print ("Debugger is running ...")
-    command = g_adb_tool + " shell run-as " + g_android_package + " sh -c '/data/data/" + g_android_package + "/lldb/bin/" + lldb_server_script + " /data/data/" + g_android_package + "/lldb unix-abstract /" + g_android_package + "-0 platform-" + g_current_miliseconds + ".sock \"lldb process:gdb-remote packets\"'"
+    command = g_adb_tool + " shell run-as " + g_android_package + " sh -c '/data/data/" + g_android_package + "/lldb/bin/" + lldb_server_script + " /data/data/" + g_android_package + "/lldb '"
     debugger_process = subprocess.Popen(command, stdout=subprocess.PIPE)
 
    # Get Current Device's name connected
@@ -256,7 +256,7 @@ def main():
 
     #Create script_commands for LLDB
     command_working_lldb = "platform select remote-android\n"
-    command_working_lldb += "platform connect unix-abstract-connect://" + device_name + "/" + g_android_package + "-0/platform-" + g_current_miliseconds + ".sock\n"
+    command_working_lldb += "platform connect connect://localhost:5432\n"
     command_working_lldb += "process attach -p " + current_pid + "\n"
     command_working_lldb += "script import subprocess\n"
     command_working_lldb += "script subprocess.Popen({})\n".format(repr(
