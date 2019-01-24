@@ -51,35 +51,47 @@ def find_file(file, path):
     print ("Cannot find file : " + file + " in path = " + path)
     exit()
 
-if sys.argv[1:2] != ["--wakeup"]:
-    print ("Finding adb tool ...")
-    g_adb_tool                  = find_program("adb", os.path.join(os.environ['ADB_PATH'], 'platform-tools'))
-    print ("Finding jdb tool ...")
-    g_jdb_tool                  = find_program("jdb", os.environ['JAVA_SDK_PATH'])
-    print ("Finding gdb tool ...")
-    g_lldb_path                 = os.environ['LLDB_PATH']
-    g_lldb_tool                 = find_program("lldb", g_lldb_path)
-    g_android_package           = os.environ['ANDROID_PACKAGE_ID']
-    g_android_main_activity     = os.environ['MAIN_ACTIVITY']
-    g_current_working_path      = os.getcwd()
-    g_current_miliseconds       = str(int(round(time.time() * 1000)))
-
-
 def run_command(command):
     p = subprocess.Popen(
             command, stdout=subprocess.PIPE, stderr=subprocess.PIPE)
     stdout, stderr = p.communicate()
     exit_code = p.returncode
     if exit_code != 0:
+        print ("=== Error ===\n") 
         print ("Command : " + command) 
-        print ("Is not valid") 
+        print ("Output : " + stdout) 
+        print ("Output Err : " + stderr) 
         print ("if this error persist, please reboot device")
         exit()
 
     return stdout, stderr
 
-def destroy_previous_session_debugger(task):
-    command = g_adb_tool + " shell ps"
+def get_pid_task(task, adb_tool):
+    command = adb_tool + " shell ps"
+    stdout, stderr = run_command(command)
+
+    lines = re.split(r'[\r\n]+', stdout.replace("\r", "").rstrip())
+    columns = lines.pop(0).split()
+    
+    try:
+        pid_column = columns.index("PID")
+    except ValueError:
+        pid_column = 1
+
+    processes = dict()
+    while lines:
+        columns = lines.pop().split()
+        process_name = columns[-1]
+        pid = columns[pid_column]
+        if process_name in processes:
+            processes[process_name].append(pid)
+        else:
+            processes[process_name] = [pid]
+    
+    return processes.get(task, [])
+
+def destroy_previous_session_debugger(task, adbtool, package):
+    command = adbtool + " shell ps"
     stdout, stderr = run_command(command)
 
     lines = re.split(r'[\r\n]+', stdout.replace("\r", "").rstrip())
@@ -104,9 +116,8 @@ def destroy_previous_session_debugger(task):
         print ("Destroying previous LLDB server sessions")
         for pid in PIDS:
             print ("Killing processes: " + pid)
-            command = g_adb_tool + " shell run-as " + g_android_package + " kill -9 " + pid
+            command = adbtool + " shell run-as " + package + " kill -9 " + pid
             stdout, stderr = run_command(command)
-
 
 def start_jdb(adb_tool, jdb_tool, pid):
     # Do setup stuff to keep ^C in the parent from killing us.
@@ -130,24 +141,36 @@ def start_jdb(adb_tool, jdb_tool, pid):
     # start polling for a Java debugger (e.g. every 200ms). We need to wait
     # a while longer then so that the app notices jdb.
     jdb_magic = "__has_started__"
-    jdb.stdin.write(bytes("print \"{}\"\n".format(jdb_magic), 'utf-8'))
+    jdb.stdin.write('print "{}"\n'.format(jdb_magic))
     saw_magic_str = False
     while True:
         line = jdb.stdout.readline()
         if line == "":
             break
         #print "jdb output: " + line.rstrip()
-        if bytes(jdb_magic, 'utf-8') in line and not saw_magic_str:
+        if jdb_magic in line and not saw_magic_str:
             saw_magic_str = True
             time.sleep(0.3)
             jdb.stdin.write("exit\n")
     jdb.wait()
     return 0
-    
+
 def main():
     if sys.argv[1:2] == ["--wakeup"]:
         return start_jdb(*sys.argv[2:])
 
+    print ("Finding adb tool ...")
+    g_adb_tool                  = find_program("adb", os.path.join(os.environ['ADB_PATH'], 'platform-tools'))
+    print ("Finding jdb tool ...")
+    g_jdb_tool                  = find_program("jdb", os.environ['JAVA_SDK_PATH'])
+    print ("Finding gdb tool ...")
+    g_lldb_path                 = os.environ['LLDB_PATH']
+    g_lldb_tool                 = find_program("lldb", g_lldb_path)
+    g_android_package           = os.environ['ANDROID_PACKAGE_ID']
+    g_android_main_activity     = os.environ['MAIN_ACTIVITY']
+    g_current_working_path      = os.getcwd()
+    g_current_miliseconds       = str(int(round(time.time() * 1000)))
+    
     #Check if device is connected
     command = g_adb_tool + " devices"
     stdout, stderr = run_command(command)
@@ -166,22 +189,12 @@ def main():
     command = g_adb_tool + ' shell getprop ro.product.cpu.abi '
     stdout, stderr = run_command(command)
 
+    #detect ABI
     detectABI = stdout
-
-    #default ABI
-    g_arch_device  = "arm"
     g_detected_abi = detectABI.lower().strip()
-    #Select ABI 
-    if g_detected_abi == 'arm64-v8a':
-        g_arch_device = 'arm64'
-
-    if g_detected_abi == 'x86':
-        g_arch_device = 'x86'
-
-    if g_detected_abi == 'x86_64':
-        g_arch_device = 'x86_64'
-
-    destroy_previous_session_debugger("lldb-server")
+    
+    #destroy previous debugger session
+    destroy_previous_session_debugger("lldb-server", g_adb_tool, g_android_package)
     
     print ("Install LLDB files into device")
     
@@ -210,14 +223,14 @@ def main():
     time.sleep(1)
 
     # Get Current PID for current debugger session
-    command = g_adb_tool + " shell ps | grep " + g_android_package
-    stdout, stderr = run_command(command)
-    str = stdout
-    if len(str) is 0:
-        print ("Not instance of " + g_android_package + " was found")
-        exit()
-    current_pid = filter(None, str.split(" "))[1]
+    pids = get_pid_task(g_android_package, g_adb_tool)
+    if len(pids) == 0:
+        error("Failed to find running process '{}'".format(g_android_package))
+    if len(pids) > 1:
+        error("Multiple running processes named '{}'".format(g_android_package))
     
+    current_pid = pids[0]
+
     #check if exist folder /data/data/<package-id>/lldb 
     command = g_adb_tool + " shell run-as " + g_android_package + " sh -c 'if [ -d \"/data/data/" + g_android_package + "/lldb\" ]; then echo \"1\"; else echo \"0\"; fi;'"
     stdout, stderr = run_command(command)
