@@ -294,7 +294,7 @@ def main():
     command_working_lldb += "script import subprocess\n"
     command_working_lldb += "script subprocess.Popen({})\n".format(repr(
             [
-                "python",
+                sys.executable,
                 os.path.realpath(__file__),
                 "--wakeup",
                 g_adb_tool,
